@@ -1,0 +1,85 @@
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+    # multi_accept on;
+}
+
+http {
+  include /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+
+    map $http_upgrade $connection_upgrade {
+            default upgrade;
+            '' close;
+    }
+    server {
+		listen       443 ssl;
+		server_name  test-ionotical.teliolabs.com;
+		ssl_certificate /etc/ssl/ionotical/fullchain.pem;
+		ssl_certificate_key /etc/ssl/ionotical/privkey.pem;
+		ssl_trusted_certificate /etc/ssl/ionotical/chain.pem;
+		add_header Access-Control-Allow-Origin *;
+		location / {
+			proxy_pass http://localhost:31234;
+		}
+		location /login {
+			rewrite  ^/grafana/(.*)  /$1 break;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection $connection_upgrade;
+			proxy_set_header Host $http_host;
+			proxy_pass http://localhost:31000;
+		}
+		location /api/ {
+			proxy_pass http://localhost:31000;
+		}
+		location /email-notif/ {
+			proxy_pass http://localhost:32670;
+		}
+		location /d/ {
+			rewrite  ^/grafana/(.*)  /$1 break;
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection $connection_upgrade;
+			proxy_set_header Host $http_host;
+			proxy_pass http://localhost:31000;
+		}
+		location /avatar/ {
+				rewrite  ^/grafana/(.*)  /$1 break;
+				proxy_http_version 1.1;
+				proxy_set_header Upgrade $http_upgrade;
+				proxy_set_header Connection $connection_upgrade;
+				proxy_set_header Host $http_host;
+			proxy_pass http://localhost:31000;
+		}
+        location /user-service/ {
+              proxy_pass http://localhost:31222;
+        }
+        location /public/ {
+            rewrite  ^/grafana/(.*)  /$1 break;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $http_host;
+            proxy_pass http://localhost:31000;
+        }
+        location /multidevice-registry/ {
+            proxy_pass http://localhost:32470;
+        }
+        location /command-service/ {
+          proxy_pass http://localhost:31432;
+        }
+            #for rule engine services
+        location /rule-engine/ {
+          proxy_pass http://localhost:32570;
+        }
+    }
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
